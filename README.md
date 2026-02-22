@@ -22,6 +22,8 @@ claude /plugin install https://github.com/worktoolai/worktoolai-skill
 cp -r skills/worktoolai ~/.config/opencode/skills/
 ```
 
+Also listed on [awesome-opencode](https://github.com/awesome-opencode/awesome-opencode).
+
 ### Other agentskills.io-compatible tools
 
 Copy the `skills/worktoolai` directory to your tool's skills directory.

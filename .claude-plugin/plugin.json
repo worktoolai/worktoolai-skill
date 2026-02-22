@@ -1,6 +1,12 @@
 {
   "name": "worktoolai",
-  "description": "AI agent skills for structured markdown and JSON processing — markdownai + jsonai",
-  "version": "0.1.0",
+  "description": "AI agent skills for structured code, markdown, and JSON processing — codeai + markdownai + jsonai",
+  "version": "1.0.0",
+  "author": {
+    "name": "worktoolai"
+  },
+  "repository": "https://github.com/worktoolai/worktoolai-skill",
+  "license": "MIT",
+  "keywords": ["codeai", "markdownai", "jsonai", "code-analysis", "markdown", "json"],
   "skills": ["skills/worktoolai"]
 }
