@@ -9,7 +9,7 @@
     {
       "name": "worktoolai",
       "description": "AI agent skills for structured code, markdown, and JSON processing — codeai + markdownai + jsonai",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": {
         "name": "worktoolai"
       },
@@ -26,5 +26,5 @@
       ]
     }
   ],
-  "version": "1.0.1"
+  "version": "1.0.2"
 }

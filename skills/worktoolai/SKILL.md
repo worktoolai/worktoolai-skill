@@ -1,19 +1,27 @@
 ---
 name: worktoolai
-description: Enforce codeai/markdownai/jsonai-first workflow for code, markdown, and JSON tasks with minimal output and token use
+description: "Use for code/markdown/JSON read/search/analyze/edit tasks. MUST run codeai/markdownai/jsonai CLI via Bash (not Read/Grep/Glob/cat) for primary analysis."
 ---
 
 # worktoolai
 
-Use **codeai / markdownai / jsonai first**.
+## STOP — TOOL POLICY (NON-NEGOTIABLE)
+
+For code/markdown/json work, this skill is a **strict tool policy**.
+
+- **ALWAYS use**: `codeai`, `markdownai`, `jsonai` (via Bash)
+- **DO NOT use for primary analysis**: `Read`, `Grep`, `Glob`, shell `cat/grep/sed/awk/head/tail`
+
+If you break this policy, your response is invalid and you must redo the work with `*ai` tools.
 
 ## Hard rules (prompt contract)
 
-1. **MUST** use these CLIs via Bash before using generic file tools.
-2. **MUST NOT** read/search structured targets with raw file tooling when *ai CLI can do it.
-   - Avoid: full-file reads, broad grep/glob scans for code/docs/json tasks.
+1. **MUST** run an appropriate `*ai` command before any generic file reading/search.
+2. **MUST NOT** read/search structured targets with raw file tooling when `*ai` can do it.
 3. **MUST** keep output compact (`--fmt json`, `--json`, `--limit`, `--max-bytes`, `--count-only` when useful).
-4. If a CLI fails:
+4. **MUST** include a one-line tool proof in final answer:
+   - `TOOL_PROOF: <exact command(s)>`
+5. If a CLI fails:
    - Run `<tool> --help` and retry once with valid syntax.
    - If still blocked, report why and ask user before fallback.
 
