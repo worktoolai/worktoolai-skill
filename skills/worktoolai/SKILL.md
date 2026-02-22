@@ -47,22 +47,23 @@ For code/markdown/json work, this skill is a strict **default** policy with prac
 Help-verified commands:
 - `index` — build/update index
 - `search <QUERY>` — find code blocks
-- `outline <PATH>` — list blocks in file
+- `outline <PATH>` — list blocks in a file
 - `open --symbol <ID>` / `open --symbols ...` / `open --range ...` — read block/range
+- `graph <PATH>` — show import/dependency graph from entry file
 
 Recommended flow:
 1. `codeai index`
 2. `codeai search "<query>" --fmt json --limit 10`
-3. `codeai outline <file> --fmt json` (if needed)
-4. `codeai open --symbol "<symbol-id>" --fmt json`
+3. `codeai open --symbol "<symbol-id>" --fmt json`
+4. (Optional) `codeai outline <file> --fmt json` / `codeai graph <file> --fmt thin`
 
-Useful flags:
-- `--fmt thin|json|lines`
-- `--limit <N>`
-- `--path <prefix>`
-- `--lang <language>`
-- `--max-bytes <N>`
-- `--cursor <cursor>`
+Useful flags (by command):
+- Common: `--fmt thin|json|lines` (`graph`: `tree|thin`), `--max-bytes <N>`
+- `index`: `--full`, `--path <prefix>`, `--lang <language>`, `--ignore-file <FILE>`
+- `search`: `--limit <N>`, `--path <prefix>`, `--lang <language>`, `--cursor <cursor>`
+- `outline`: `--kind <KIND>`, `--limit <N>`, `--cursor <cursor>`
+- `open`: `--symbol`, `--symbols`, `--range`, `--preview-lines <N>`, `--offset <N>`
+- `graph`: `--depth <N>`, `--limit <N>`, `--offset <N>`, `--external`
 
 ### Search query guide (all tools, avoid agent confusion)
 
@@ -74,8 +75,8 @@ Useful flags:
   - Example: `index incremental generation`
 - Narrow with tool flags, not punctuation:
   - `codeai`: `--path`, `--lang`, `--limit`
-  - `markdownai`: `--limit`, `--offset`, `--threshold`
-  - `jsonai`: use `query -f` for exact paths/filters
+  - `markdownai`: `--limit`, `--offset`, `--match`, `--scope`, `--threshold`
+  - `jsonai`: `search --field/--match` or `query -f` for exact paths/filters
 - Empty result means "no matches" (not command failure); broaden/normalize and retry.
 - Before language-specific queries, verify relevant files exist first.
 
@@ -91,15 +92,21 @@ Recommended flow:
 1. `markdownai toc <file> --json`
 2. `markdownai read <file> --section "<addr>" --json`
 3. `markdownai search <dir-or-file> -q "<query>" --json --limit 20`
-4. Modify with `section-set|section-add|section-delete` only when needed
+4. Modify with `section-set|section-add|section-delete|frontmatter-set` when needed
 
-Useful flags:
-- `--json` `--pretty`
-- `--limit <N>` `--offset <N>`
-- `--max-bytes <N>`
-- `--count-only` `--exists` `--stats`
-- `--threshold <N>` `--plan` `--no-overflow`
-- `--sync auto|force` `--root <DIR>`
+Useful flags (common):
+- `--json` `--pretty` `--max-bytes <N>`
+- `--limit <N>` `--offset <N>` `--threshold <N>`
+- `--count-only` `--exists` `--stats` `--plan` `--no-overflow`
+- `--facets <FIELD>` `--sync auto|force` `--root <DIR>`
+
+Command-specific highlights:
+- `read`: `--section`, `--summary [N]`, `--meta`
+- `search`: `--match text|exact|fuzzy|regex`, `--scope all|body|headers|frontmatter|code`, `--context <N>`, `--bare`
+- `tree`: `--depth <N>`, `--files-only`, `--count`
+- `links`: `--type wiki|markdown|all`, `--resolved`, `--broken`
+- `graph`: `--format adjacency|edges|stats`, `--start <FILE>`, `--depth <N>`, `--orphans`
+- Write commands (`section-*`, `frontmatter-set`): `--dry-run`, `--output <FILE>`, `--with-toc` (where supported), `--content-file <FILE>` (set/add)
 
 Section addressing:
 - TOC index: `"#1.2"`
@@ -115,13 +122,20 @@ Help-verified commands:
 - `set` `add` `delete` `patch`
 
 Recommended flow:
-1. `jsonai cat <file> --pretty` (or compact by default)
+1. `jsonai cat <file> --pretty` (or `--pointer /path/to/node` for subtree)
 2. `jsonai search -q "<term>" --all <file>`
 3. `jsonai query -f '<jq-filter>' <file>`
-4. Update with `set|add|delete|patch` as needed
+4. Update with `set|add|delete|patch` as needed (`--dry-run` first when changing files)
 
-Useful flags:
+Useful flags (common):
 - `--pretty` `--compact`
+
+Command-specific highlights:
+- `cat`: `--pointer <JSON-Pointer>`
+- `search`: `--field <FIELD>` (repeatable), `--all`, `--match text|exact|fuzzy|regex`, `--output match|hit|value`, `--select <FIELDS>`, `--limit`, `--offset`, `--count-only`, `--bare`, `--max-bytes`, `--threshold`, `--plan`, `--no-overflow`, `--schema <FILE>`
+- `fields`: `--schema`
+- `query`: `-f|--filter '<jq-filter>'`
+- Mutating commands (`set|add|delete|patch`): `--output <FILE>`, `--dry-run` (`set|add|delete` use `--pointer`; `patch` uses `--patch <DOC|->`)
 
 ---
 
@@ -129,21 +143,37 @@ Useful flags:
 
 ### Find function implementation
 ```bash
-codeai index
-codeai search "<function-name or behavior>" --fmt json --limit 10
-codeai open --symbol "<symbol-id>" --fmt json
+codeai index --path src/
+codeai search "<function-name or behavior>" --fmt json --path src/ --limit 10
+codeai open --symbol "<symbol-id>" --fmt json --preview-lines 120
+```
+
+### Inspect dependency graph from entry file
+```bash
+codeai graph <entry-file> --fmt thin --depth 2 --limit 20
 ```
 
 ### Read only one markdown section
 ```bash
-markdownai toc <file> --json
-markdownai read <file> --section "#1.3" --json
+markdownai toc <file> --json --limit 100
+markdownai read <file> --section "#1.3" --json --summary 5 --meta
 ```
 
-### Extract one JSON value
+### Search markdown with scope/match
 ```bash
-jsonai cat <file> --pretty
+markdownai search <dir-or-file> -q "<query>" --scope headers --match text --json --limit 20
+```
+
+### Extract one JSON value or subtree
+```bash
+jsonai cat <file> --pointer /path/to/node --pretty
 jsonai query -f '.path.to.value' <file>
+```
+
+### Safely update JSON (dry run first)
+```bash
+jsonai set --pointer /path/to/key '<value-json>' <file> --dry-run --pretty
+jsonai set --pointer /path/to/key '<value-json>' <file> --pretty
 ```
 
 ---
