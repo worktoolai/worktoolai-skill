@@ -1,0 +1,6 @@
+{
+  "name": "worktoolai",
+  "description": "AI agent skills for structured markdown and JSON processing — markdownai + jsonai",
+  "version": "0.1.0",
+  "skills": ["skills/worktoolai"]
+}
