@@ -56,6 +56,14 @@ skills/worktoolai/
 
 All command usage guidance is intentionally consolidated in `SKILL.md`.
 
+### Search tips (all tools, quick)
+
+- Use semantic keywords, not escaped signatures/regex.
+- Prefer 2-5 tokens: `<target> <action> <context>` (e.g., `service update method`).
+- Narrow with tool-specific flags (path/lang/limit-style options).
+- Empty result means "no matches" (not a command error); broaden/normalize and retry.
+- Confirm relevant files/data exist before highly specific queries.
+
 ## License
 
 MIT

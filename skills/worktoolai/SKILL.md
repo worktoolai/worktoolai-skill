@@ -64,6 +64,21 @@ Useful flags:
 - `--max-bytes <N>`
 - `--cursor <cursor>`
 
+### Search query guide (all tools, avoid agent confusion)
+
+- Treat search as semantic keyword lookup, not regex/signature matching.
+- Do **not** use escaped signatures/special chars as the primary query.
+  - Bad: `func \(s \*Service\) Update`
+  - Good: `service update method`
+- Keep query short (2-5 tokens): `<target> <action> <context>`
+  - Example: `index incremental generation`
+- Narrow with tool flags, not punctuation:
+  - `codeai`: `--path`, `--lang`, `--limit`
+  - `markdownai`: `--limit`, `--offset`, `--threshold`
+  - `jsonai`: use `query -f` for exact paths/filters
+- Empty result means "no matches" (not command failure); broaden/normalize and retry.
+- Before language-specific queries, verify relevant files exist first.
+
 ---
 
 ## markdownai (markdown)
