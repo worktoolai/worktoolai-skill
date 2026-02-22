@@ -49,13 +49,12 @@ curl -fsSL https://raw.githubusercontent.com/worktoolai/jsonai/main/install.sh |
 
 ```
 skills/worktoolai/
-├── SKILL.md                 # Main skill (core workflows + references)
+├── SKILL.md                 # Main skill (compact usage contract)
 └── references/
-    ├── install.md           # Installation guide
-    ├── codeai.md            # Full codeai command reference
-    ├── markdownai.md        # Full markdownai command reference
-    └── jsonai.md            # Full jsonai command reference
+    └── install.md           # Installation guide (install-only reference)
 ```
+
+All command usage guidance is intentionally consolidated in `SKILL.md`.
 
 ## License
 

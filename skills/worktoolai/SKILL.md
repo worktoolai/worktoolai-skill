@@ -1,121 +1,127 @@
 ---
 name: worktoolai
-description: Agent tools for structured code, markdown, and JSON access — read, search, and modify source code blocks, markdown documents, and JSON files with minimal token cost using codeai, markdownai, and jsonai CLIs
+description: Enforce codeai/markdownai/jsonai-first workflow for code, markdown, and JSON tasks with minimal output and token use
 ---
 
 # worktoolai
 
-Three CLI tools optimized for AI agents working with code, markdown, and JSON.
+Use **codeai / markdownai / jsonai first**.
 
-## When to use
+## Hard rules (prompt contract)
 
-- **codeai** — source code exploration. Index a codebase, search by function name or content, read individual blocks (functions/classes) instead of whole files.
-- **markdownai** — markdown collections (docs, Obsidian vaults, knowledge bases). Read sections instead of whole files. Search across documents. Modify surgically.
-- **jsonai** — JSON files (configs, API responses, data). Compact output by default. Full-text search returns only matching objects. jq filters built-in.
+1. **MUST** use these CLIs via Bash before using generic file tools.
+2. **MUST NOT** read/search structured targets with raw file tooling when *ai CLI can do it.
+   - Avoid: full-file reads, broad grep/glob scans for code/docs/json tasks.
+3. **MUST** keep output compact (`--fmt json`, `--json`, `--limit`, `--max-bytes`, `--count-only` when useful).
+4. If a CLI fails:
+   - Run `<tool> --help` and retry once with valid syntax.
+   - If still blocked, report why and ask user before fallback.
 
-All tools share the same design principles: minimal token output, overflow protection, byte budgets, and structured envelopes.
+> Install/setup: [references/install.md](references/install.md)
 
-## References
+---
 
-| Document | Description |
-|----------|-------------|
-| [install.md](references/install.md) | Installation guide for all three tools |
-| [codeai.md](references/codeai.md) | codeai full command reference, output format, symbol ID system |
-| [markdownai.md](references/markdownai.md) | markdownai full command reference, flags, and examples |
-| [jsonai.md](references/jsonai.md) | jsonai full command reference, flags, and examples |
+## Router
 
-## Core Workflows
+- Source code task (function/class/import/flow/refactor): **codeai**
+- Markdown docs/notes/sections/search/edit: **markdownai**
+- JSON config/data/query/update: **jsonai**
 
-### codeai — Block-Level Code Exploration
+---
 
-```
-1. index                       → parse and index the codebase
-2. search "query"              → find blocks by name, content, doc comments
-3. outline FILE                → list all blocks in a file (table of contents)
-4. open --symbol ID            → read just that function/class
-5. open --symbols id1,id2,id3  → batch read multiple blocks
-6. graph FILE                  → show import/dependency graph from entry file
-```
+## codeai (code)
 
-Symbol IDs are stable (`path#kind#name`) — they survive code edits without stale line numbers.
+Help-verified commands:
+- `index` — build/update index
+- `search <QUERY>` — find code blocks
+- `outline <PATH>` — list blocks in file
+- `open --symbol <ID>` / `open --symbols ...` / `open --range ...` — read block/range
 
-### markdownai — Structured Markdown Access
+Recommended flow:
+1. `codeai index`
+2. `codeai search "<query>" --fmt json --limit 10`
+3. `codeai outline <file> --fmt json` (if needed)
+4. `codeai open --symbol "<symbol-id>" --fmt json`
 
-```
-1. toc FILE                    → discover structure
-2. read FILE --summary         → preview all sections (first 3 lines each)
-3. read FILE --section "#N.M"  → read specific section
-4. search DIR -q "keyword"     → find across files
-5. section-set / section-add   → modify (use --dry-run first)
-```
+Useful flags:
+- `--fmt thin|json|lines`
+- `--limit <N>`
+- `--path <prefix>`
+- `--lang <language>`
+- `--max-bytes <N>`
+- `--cursor <cursor>`
 
-Section addressing: TOC index (`"#1.1"`), header path (`"## Setup > ### Prerequisites"`), line range (`"L10-L25"`).
+---
 
-### jsonai — JSON for AI Agents
+## markdownai (markdown)
 
-```
-1. cat FILE                    → read compact JSON
-2. cat -p /path FILE           → extract specific value
-3. search -q "term" --all FILE → find matching objects
-4. query -f 'FILTER' FILE      → jq filter (no jq needed)
-5. set/add/delete              → modify by JSON Pointer
-```
+Help-verified commands:
+- `toc` `read` `tree` `search` `frontmatter` `links` `backlinks` `graph`
+- `section-set` `section-add` `section-delete` `frontmatter-set` `index`
 
-## Common Patterns
+Recommended flow:
+1. `markdownai toc <file> --json`
+2. `markdownai read <file> --section "<addr>" --json`
+3. `markdownai search <dir-or-file> -q "<query>" --json --limit 20`
+4. Modify with `section-set|section-add|section-delete` only when needed
 
-### Global flags
+Useful flags:
+- `--json` `--pretty`
+- `--limit <N>` `--offset <N>`
+- `--max-bytes <N>`
+- `--count-only` `--exists` `--stats`
+- `--threshold <N>` `--plan` `--no-overflow`
+- `--sync auto|force` `--root <DIR>`
 
-| Flag | codeai | markdownai | jsonai |
-|------|--------|------------|--------|
-| `--pretty` | | x | x |
-| `--compact` | | | x |
-| `--max-bytes <N>` | x (default: 12000/16000) | x | x |
-| `--limit <N>` | x (default: 10/100) | x (default: 20) | x (default: 20) |
-| `--offset <N>` | | x | x |
-| `--count-only` | | x | x |
-| `--fmt <FMT>` | x (thin/json/lines) | | |
-| `--json` | | x | |
-| `--exists` | | x | |
-| `--stats` | | x | |
-| `--bare` | | x (search) | x |
-| `--select` | | | x |
-| `--sync <MODE>` | | x (auto/force) | |
-| `--root <DIR>` | | x | |
+Section addressing:
+- TOC index: `"#1.2"`
+- Header path: `"## A > ### B"`
+- Line range: `"L10-L25"`
 
-### Overflow protection
+---
 
-markdownai and jsonai prevent flooding agent context when results are large:
+## jsonai (json)
 
-- Results exceeding `--threshold` (default: 50) trigger **plan mode**
-- Plan mode returns metadata and suggestions for narrowing the query
-- Use `--plan` to force plan mode, `--no-overflow` to bypass
+Help-verified commands:
+- `cat` `search` `fields` `query`
+- `set` `add` `delete` `patch`
 
-codeai uses `--max-bytes` with cursor-based pagination instead.
+Recommended flow:
+1. `jsonai cat <file> --pretty` (or compact by default)
+2. `jsonai search -q "<term>" --all <file>`
+3. `jsonai query -f '<jq-filter>' <file>`
+4. Update with `set|add|delete|patch` as needed
 
-### Exit codes
+Useful flags:
+- `--pretty` `--compact`
 
-| Code | codeai | markdownai / jsonai |
-|------|--------|---------------------|
-| `0` | Success | Success / matches found |
-| `1` | Error | Not found (not an error) |
-| `2` | | Error (parse, runtime) |
+---
 
-### Stdin support
+## Minimal playbooks
 
-markdownai and jsonai accept `-` for stdin:
-
+### Find function implementation
 ```bash
-git show HEAD:docs/guide.md | markdownai toc -
-curl https://api.example.com/data | jsonai search -q "error" --all -
+codeai index
+codeai search "<function-name or behavior>" --fmt json --limit 10
+codeai open --symbol "<symbol-id>" --fmt json
 ```
 
-### Storage
-
-codeai and markdownai store their indices in `.worktoolai/` at the project root:
-```
-.worktoolai/
-  markdownai.db          ← SQLite
-  markdownai_index/      ← Tantivy
+### Read only one markdown section
+```bash
+markdownai toc <file> --json
+markdownai read <file> --section "#1.3" --json
 ```
 
-jsonai uses in-memory indexing — no disk storage required.
+### Extract one JSON value
+```bash
+jsonai cat <file> --pretty
+jsonai query -f '.path.to.value' <file>
+```
+
+---
+
+## Response discipline
+
+- Do not dump full files if block/section/value access is enough.
+- Prefer targeted reads + small limits.
+- State which *ai command was used when summarizing findings.
