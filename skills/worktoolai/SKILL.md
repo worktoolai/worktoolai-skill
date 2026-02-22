@@ -34,6 +34,7 @@ All tools share the same design principles: minimal token output, overflow prote
 3. outline FILE                → list all blocks in a file (table of contents)
 4. open --symbol ID            → read just that function/class
 5. open --symbols id1,id2,id3  → batch read multiple blocks
+6. graph FILE                  → show import/dependency graph from entry file
 ```
 
 Symbol IDs are stable (`path#kind#name`) — they survive code edits without stale line numbers.

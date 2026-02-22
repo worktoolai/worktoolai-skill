@@ -12,8 +12,9 @@ Commands:
   search   Search for code blocks
   outline  List blocks in a file
   open     Open (read) code blocks by symbol ID
+  graph    Show import/dependency graph from entry file
 
-Workflow: index → search/outline → open
+Workflow: index → search/outline/graph → open
 Output: --fmt thin (default, compact JSON) | json (pretty) | lines (one per line)
 Exit: 0=ok, 1=error
 ```
@@ -111,6 +112,69 @@ codeai open --range "src/main.rs:10:0-25:0"
 Symbol ID format: `path#kind#name` or `path#kind#name#N` (N=occurrence index).
 Obtained from: search results (`i[][0]`), outline results (`i[][0]`).
 
+### `graph <path>`
+
+Show import/dependency graph starting from an entry file. Imports are extracted at index time using Tree-sitter AST and resolved to project files. BFS traversal with cycle detection.
+
+```bash
+# ASCII tree (default, human-readable)
+codeai graph src/main.rs
+
+# Compact JSON for agents
+codeai graph src/main.rs --fmt thin
+
+# Limit BFS depth
+codeai graph src/main.rs --depth 2
+
+# Paginate edges (thin format)
+codeai graph src/main.rs --fmt thin --limit 10
+codeai graph src/main.rs --fmt thin --limit 10 --offset 10
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--depth <N>` | Max BFS depth | `10` |
+| `--limit <N>` | Max edges per page | `50` |
+| `--offset <N>` | Edge offset for pagination | `0` |
+| `--max-bytes <N>` | Max output bytes | `12000` |
+| `--fmt <FMT>` | Output format: `tree`, `thin` | `tree` |
+
+Tree output:
+```
+src/main.rs
+├── src/commands/mod.rs
+│   ├── src/commands/index.rs
+│   │   └── src/store.rs
+│   └── src/commands/search.rs
+│       └── src/store.rs (cycle)
+├── src/models.rs
+└── [ext] clap
+
+5 files, 6 edges, 1 cycles (--limit 50 --offset 0)
+```
+
+Thin JSON output (`--fmt thin`):
+```json
+{
+  "v": 1,
+  "m": ["graph", 12000, 2400, 0, null],
+  "i": [
+    {"entry": "src/main.rs", "files": 5, "edges": 6, "cycles": 1, "external": 3, "depth": 3},
+    [
+      ["src/main.rs", "src/commands/mod.rs", "crate::commands", "module"],
+      ["src/main.rs", null, "clap::{Parser, Subcommand}", "external"]
+    ]
+  ]
+}
+```
+
+- `i[0]` = summary (always full graph stats, pagination-independent)
+- `i[1]` = edge array (paginated by `--limit`/`--offset`)
+- Edge tuple: `[from_path, to_path|null, raw_import, kind]`
+- `to_path` is `null` for external dependencies
+- `m[3]` = `1` when more edges available (next page exists)
+- kind values: `module`, `external`, `cycle`, `include`, `require`, `source`
+
 ## Symbol IDs
 
 Stable, human-readable identifiers for code blocks:
@@ -168,10 +232,11 @@ Go, Rust, Python, TypeScript, TSX, JavaScript, JSX, Java, Kotlin, C, C++, C#, Sw
 ## Agent Workflow
 
 ```
-1. index    →  build/update block index
+1. index    →  build/update block index (also extracts imports)
 2. search   →  find candidate blocks (even with fuzzy recall)
-3. open     →  read just those blocks
-4. repeat with refined search if needed
+3. graph    →  understand file dependencies from any entry point
+4. open     →  read just those blocks
+5. repeat with refined search if needed
 ```
 
 ## Exit Codes
