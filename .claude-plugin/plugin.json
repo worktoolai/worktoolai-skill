@@ -7,6 +7,5 @@
   },
   "repository": "https://github.com/worktoolai/worktoolai-skill",
   "license": "MIT",
-  "keywords": ["codeai", "markdownai", "jsonai", "code-analysis", "markdown", "json"],
-  "skills": ["skills/worktoolai"]
+  "keywords": ["codeai", "markdownai", "jsonai", "code-analysis", "markdown", "json"]
 }
