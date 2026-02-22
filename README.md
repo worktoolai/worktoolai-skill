@@ -10,7 +10,14 @@ AI agent skill for structured code, markdown, and JSON processing — integrates
 
 ## Install
 
-### Claude Code
+### Claude Code (marketplace)
+
+```bash
+/plugin marketplace add https://github.com/worktoolai/worktoolai-skill
+/plugin install worktoolai
+```
+
+### Claude Code (direct)
 
 ```bash
 claude /plugin install https://github.com/worktoolai/worktoolai-skill
