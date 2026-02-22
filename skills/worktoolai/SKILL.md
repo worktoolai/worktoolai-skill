@@ -1,29 +1,34 @@
 ---
 name: worktoolai
-description: "Use for code/markdown/JSON read/search/analyze/edit tasks. MUST run codeai/markdownai/jsonai CLI via Bash (not Read/Grep/Glob/cat) for primary analysis."
+description: "Use for code/markdown/JSON read/search/analyze/edit tasks. Prefer codeai/markdownai/jsonai CLI via Bash; allow Read/Grep/Glob when they are clearly faster for narrow lookups."
 ---
 
 # worktoolai
 
-## STOP — TOOL POLICY (NON-NEGOTIABLE)
+## TOOL POLICY (STRICT DEFAULT, FAST EXCEPTIONS)
 
-For code/markdown/json work, this skill is a **strict tool policy**.
+For code/markdown/json work, this skill is a strict **default** policy with practical exceptions.
 
-- **ALWAYS use**: `codeai`, `markdownai`, `jsonai` (via Bash)
-- **DO NOT use for primary analysis**: `Read`, `Grep`, `Glob`, shell `cat/grep/sed/awk/head/tail`
-
-If you break this policy, your response is invalid and you must redo the work with `*ai` tools.
+- **Default path**: use `codeai`, `markdownai`, `jsonai` (via Bash)
+- **Allowed fast path**: use `Read`, `Grep`, `Glob` when they are clearly faster (targeted lookup/discovery)
+- **Never use shell text tools for primary analysis**: `cat/grep/sed/awk/head/tail`
 
 ## Hard rules (prompt contract)
 
-1. **MUST** run an appropriate `*ai` command before any generic file reading/search.
-2. **MUST NOT** read/search structured targets with raw file tooling when `*ai` can do it.
-3. **MUST** keep output compact (`--fmt json`, `--json`, `--limit`, `--max-bytes`, `--count-only` when useful).
-4. **MUST** include a one-line tool proof in final answer:
-   - `TOOL_PROOF: <exact command(s)>`
-5. If a CLI fails:
-   - Run `<tool> --help` and retry once with valid syntax.
-   - If still blocked, report why and ask user before fallback.
+1. Choose the fastest valid tool path for the task.
+2. Prefer `*ai` CLIs for structured/deep analysis and updates.
+3. You MAY use `Read/Grep/Glob` immediately when any of these apply:
+   - exact file path or symbol location is already known
+   - narrow regex/string lookup across files is needed
+   - quick file discovery by pattern is needed
+   - `*ai` indexing/startup overhead is higher than expected gain
+4. Keep output compact (`--fmt json`, `--json`, `--limit`, `--max-bytes`, `--count-only` when useful).
+5. Include one-line proof in final answer:
+   - `TOOL_PROOF: <exact command(s) or tool call(s)>`
+   - If generic tools were used: `FALLBACK_REASON: <why generic was faster>`
+6. If a `*ai` CLI fails:
+   - run `<tool> --help` and retry once
+   - if still blocked, use `Read/Grep/Glob` with `FALLBACK_REASON`
 
 > Install/setup: [references/install.md](references/install.md)
 
