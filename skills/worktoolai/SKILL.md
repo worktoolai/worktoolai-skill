@@ -34,6 +34,28 @@ For code/markdown/json work, this skill is a strict **default** policy with prac
 
 ---
 
+## When to use for initial project analysis
+
+When first encountering an unfamiliar codebase or markdown knowledge base, use these tools to build a mental model quickly:
+
+**Code projects** — use `codeai` to understand structure before diving into files:
+1. `codeai index` — build the block index (incremental, fast on repeat)
+2. `codeai project get --fmt thin` — infer entrypoints, shared modules, and orphans from the dependency graph.
+   - **Multi-project / monorepo**: always split by subproject with `--path <subdir>`. Running on the whole repo mixes languages/frameworks and produces unusable results.
+   - e.g. `codeai project get --path backend --fmt thin` → `codeai project get --path frontend --fmt thin`
+3. `codeai graph <entry-file> --fmt thin --depth 2` — trace imports from a key entry point
+4. `codeai outline <file> --fmt thin` — list functions/classes/structs in a file
+
+**Markdown knowledge bases** — use `markdownai` to survey docs before reading:
+1. `markdownai tree <dir> --depth 2` — directory structure of markdown files
+2. `markdownai overview <dir> --json --limit 30` — file-level summary with frontmatter + structure metadata (line count, section count, etc.)
+3. `markdownai search <dir> -q "<topic>" --scope headers --json --limit 20` — find relevant sections by header
+4. `markdownai frontmatter <dir> --facets tags --json` — discover tag/category distribution
+
+These commands give high-level context without reading full file contents.
+
+---
+
 ## Router
 
 - Source code task (function/class/import/flow/refactor): **codeai**
@@ -60,12 +82,15 @@ Recommended flow:
 
 Useful flags (by command):
 - Common: `--fmt thin|json|lines` (`graph`: `tree|thin`, `project get`: `thin`), `--max-bytes <N>`
-- `index`: `--full`, `--path <prefix>`, `--lang <language>`, `--ignore-file <FILE>`
+- `index`: `--full`, `--path <prefix>`, `--lang <language>`, `--no-gitignore`, `--no-default-ignores`, `--ignore-file <FILE>`
 - `search`: `--limit <N>`, `--path <prefix>`, `--lang <language>`, `--cursor <cursor>`
 - `outline`: `--kind <KIND>`, `--limit <N>`, `--cursor <cursor>`
-- `open`: `--symbol`, `--symbols`, `--range`, `--preview-lines <N>`, `--offset <N>`
+- `open`: `--symbol`, `--symbols`, `--range`, `--preview-lines <N>` (default 80), `--offset <N>`
 - `graph`: `--depth <N>`, `--limit <N>`, `--offset <N>`, `--external`
-- `project get`: `--fmt thin`, `--max-bytes <N>`
+- `project get`: `--path <prefix>`, `--fmt thin`, `--max-bytes <N>`
+
+Supported languages: go, rust, python, typescript, tsx, javascript, jsx, java, kotlin, c, cpp, csharp, swift, scala, ruby, php, bash, hcl
+Block kinds: function, method, class, struct, interface, trait, enum, impl, module, namespace, block, object, protocol
 
 ### Search query guide (all tools, avoid agent confusion)
 
@@ -87,7 +112,7 @@ Useful flags (by command):
 ## markdownai (markdown)
 
 Help-verified commands:
-- `toc` `read` `tree` `search` `frontmatter` `links` `backlinks` `graph`
+- `toc` `read` `tree` `search` `frontmatter` `overview` `links` `backlinks` `graph`
 - `section-set` `section-add` `section-delete` `frontmatter-set` `index`
 
 Recommended flow:
@@ -103,11 +128,15 @@ Useful flags (common):
 - `--facets <FIELD>` `--sync auto|force` `--root <DIR>`
 
 Command-specific highlights:
+- `toc`: `--depth <N>`, `--flat`
 - `read`: `--section`, `--summary [N]`, `--meta`
 - `search`: `--match text|exact|fuzzy|regex`, `--scope all|body|headers|frontmatter|code`, `--context <N>`, `--bare`
 - `tree`: `--depth <N>`, `--files-only`, `--count`
+- `overview`: `--field <FIELD>` (repeatable), `--filter '<expr>'`, `--sort <FIELD|name|lines|sections>`, `--reverse`
+- `frontmatter`: `--field <FIELD>`, `--filter '<expr>'`, `--list`
 - `links`: `--type wiki|markdown|all`, `--resolved`, `--broken`
 - `graph`: `--format adjacency|edges|stats`, `--start <FILE>`, `--depth <N>`, `--orphans`
+- `index`: `--force`, `--status`, `--dry-run`, `--check`
 - Write commands (`section-*`, `frontmatter-set`): `--dry-run`, `--output <FILE>`, `--with-toc` (where supported), `--content-file <FILE>` (set/add)
 
 Shell quoting safety (for `section-add` / `section-set`):
@@ -150,11 +179,32 @@ Command-specific highlights:
 
 ## Minimal playbooks
 
+### Initial code project analysis
+```bash
+codeai index
+# Single project:
+codeai project get --fmt thin --max-bytes 12000
+# Multi-project / monorepo — split by subdir:
+codeai project get --path backend --fmt thin
+codeai project get --path frontend --fmt thin
+# then drill into key entry points:
+codeai graph <entry-file> --fmt thin --depth 2
+codeai outline <entry-file> --fmt thin
+```
+
+### Initial markdown knowledge base survey
+```bash
+markdownai tree <dir> --depth 2
+markdownai overview <dir> --json --limit 30
+markdownai frontmatter <dir> --facets tags --json
+markdownai search <dir> -q "<topic>" --scope headers --json --limit 20
+```
+
 ### Find function implementation
 ```bash
 codeai index --path src/
 codeai search "<function-name or behavior>" --fmt json --path src/ --limit 10
-codeai open --symbol "<symbol-id>" --fmt json --preview-lines 120
+codeai open --symbol "<symbol-id>" --fmt json --preview-lines 80
 ```
 
 ### Inspect dependency graph from entry file
@@ -166,6 +216,15 @@ codeai graph <entry-file> --fmt thin --depth 2 --limit 20
 ```bash
 codeai project get --fmt thin --max-bytes 12000
 ```
+
+### Analyze a subproject in a monorepo
+```bash
+# Use --path to filter by directory prefix (avoids mixed-language noise)
+codeai project get --path tokenai-proxy --fmt thin        # Go subproject only
+codeai project get --path tokenai-admin-front --fmt thin   # TS subproject only
+codeai project get --fmt thin                              # full monorepo (default)
+```
+When analyzing a monorepo, always use `--path <subdir>` to scope results to one subproject at a time. Without it, entrypoints/shared/orphan lists mix all languages and the output becomes too large to be useful.
 
 ### Read only one markdown section
 ```bash
