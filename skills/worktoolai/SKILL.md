@@ -50,6 +50,7 @@ Help-verified commands:
 - `outline <PATH>` — list blocks in a file
 - `open --symbol <ID>` / `open --symbols ...` / `open --range ...` — read block/range
 - `graph <PATH>` — show import/dependency graph from entry file
+- `project get` — infer entrypoint/shared/orphan project structure
 
 Recommended flow:
 1. `codeai index`
@@ -58,12 +59,13 @@ Recommended flow:
 4. (Optional) `codeai outline <file> --fmt json` / `codeai graph <file> --fmt thin`
 
 Useful flags (by command):
-- Common: `--fmt thin|json|lines` (`graph`: `tree|thin`), `--max-bytes <N>`
+- Common: `--fmt thin|json|lines` (`graph`: `tree|thin`, `project get`: `thin`), `--max-bytes <N>`
 - `index`: `--full`, `--path <prefix>`, `--lang <language>`, `--ignore-file <FILE>`
 - `search`: `--limit <N>`, `--path <prefix>`, `--lang <language>`, `--cursor <cursor>`
 - `outline`: `--kind <KIND>`, `--limit <N>`, `--cursor <cursor>`
 - `open`: `--symbol`, `--symbols`, `--range`, `--preview-lines <N>`, `--offset <N>`
 - `graph`: `--depth <N>`, `--limit <N>`, `--offset <N>`, `--external`
+- `project get`: `--fmt thin`, `--max-bytes <N>`
 
 ### Search query guide (all tools, avoid agent confusion)
 
@@ -108,6 +110,13 @@ Command-specific highlights:
 - `graph`: `--format adjacency|edges|stats`, `--start <FILE>`, `--depth <N>`, `--orphans`
 - Write commands (`section-*`, `frontmatter-set`): `--dry-run`, `--output <FILE>`, `--with-toc` (where supported), `--content-file <FILE>` (set/add)
 
+Shell quoting safety (for `section-add` / `section-set`):
+- Prefer `--content-file <FILE>` for multi-line content or content containing backticks (`` ` ``).
+- If inline content is required, wrap `--content` with single quotes (`'...'`) or ANSI-C quotes (`$'...'` for `\n`).
+- Do **not** use double quotes for `--content` when payload includes backticks; zsh may run command substitution.
+- Never leave markdown list bullets (`- item`) unquoted; keep the entire payload as one argument.
+- If you see `unexpected argument '- '`, check broken quoting first and retry with `--content-file`.
+
 Section addressing:
 - TOC index: `"#1.2"`
 - Header path: `"## A > ### B"`
@@ -151,6 +160,11 @@ codeai open --symbol "<symbol-id>" --fmt json --preview-lines 120
 ### Inspect dependency graph from entry file
 ```bash
 codeai graph <entry-file> --fmt thin --depth 2 --limit 20
+```
+
+### Infer project structure from index
+```bash
+codeai project get --fmt thin --max-bytes 12000
 ```
 
 ### Read only one markdown section
