@@ -213,7 +213,7 @@ Block kinds: function, method, class, struct, interface, trait, enum, impl, modu
 
 Help-verified commands:
 - `toc` `read` `tree` `search` `frontmatter` `overview` `links` `backlinks` `graph`
-- `section-set` `section-add` `section-delete` `frontmatter-set` `index`
+- `section-set` `section-add` `section-delete` `frontmatter-set` `renum` `chars` `index`
 
 Recommended flow:
 1. `markdownai toc <file> --json`
@@ -236,8 +236,10 @@ Command-specific highlights:
 - `frontmatter`: `--field <FIELD>`, `--filter '<expr>'`, `--list`
 - `links`: `--type wiki|markdown|all`, `--resolved`, `--broken`
 - `graph`: `--format adjacency|edges|stats`, `--start <FILE>`, `--depth <N>`, `--orphans`
+- `renum`: `--dry-run`, `--output <FILE>`
+- `chars`: (common flags only; input: file, directory, or stdin)
 - `index`: `--force`, `--status`, `--dry-run`, `--check`
-- Write commands (`section-*`, `frontmatter-set`): `--dry-run`, `--output <FILE>`, `--with-toc` (where supported), `--content-file <FILE>` (set/add)
+- Write commands (`section-*`, `frontmatter-set`, `renum`): `--dry-run`, `--output <FILE>`, `--with-toc` (where supported), `--content-file <FILE>` (set/add)
 
 Shell quoting safety (for `section-add` / `section-set`):
 - Prefer `--content-file <FILE>` for multi-line content or content containing backticks (`` ` ``).
