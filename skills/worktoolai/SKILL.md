@@ -5,6 +5,83 @@ description: "Use for code/markdown/JSON read/search/analyze/edit tasks. Prefer 
 
 # worktoolai
 
+## taskai (task orchestration)
+
+AI agent task orchestration CLI. Manages plans, tasks with dependencies, and agent assignment.
+
+**Setup**: Requires a git repo. Run `taskai init` first. DB stored at `<git-root>/.worktoolai/taskai/taskai.db`.
+
+Help-verified commands:
+- `init` — initialize DB in git repo
+- `plan create|list|show|activate|delete|load` — plan lifecycle
+- `task add|list|show|start|done|fail|skip|cancel` — task lifecycle
+- `task dep add|remove` — manage task dependencies
+- `next` — get next ready task (highest priority, then sort order)
+- `status` — show overall progress
+
+Global flags: `--json`, `--plan <NAME|ID>`
+
+### Orchestrator loop (primary use case)
+
+```bash
+# Load a plan from JSON
+echo '{"name":"my-plan","title":"My Plan","tasks":[
+  {"id":"t1","title":"Setup","agent":"claude-code","priority":10},
+  {"id":"t2","title":"Build","agent":"claude-code","after":["t1"]},
+  {"id":"t3","title":"Test","agent":"claude-code","after":["t2"]}
+]}' | taskai plan load --json
+
+# Agent loop: claim → execute → done
+while true; do
+  TASK=$(taskai next --claim --agent "my-agent" --json)
+  # exit 0 + plan_completed=true → done
+  # exit 2 → waiting (blocked/in_progress remain)
+  TASK_ID=$(echo "$TASK" | jq -r '.data.task.id')
+  # ... execute task ...
+  taskai task done "$TASK_ID" --json
+done
+```
+
+### Key concepts
+
+- **`agent`** field: pre-assigned at creation (who *should* execute). Set via `task add --agent` or `"agent"` in `plan load` JSON.
+- **`assigned_to`** field: set at runtime when claimed (who *actually* claimed). Set via `next --claim --agent` or `task start --agent`.
+- **Status flow**: `blocked` → `ready` → `in_progress` → `done` / `cancelled` / `skipped`
+- **Unblock rule**: only `done` unblocks dependents. `cancelled`/`skipped` do NOT.
+- **Exit codes**: 0 = success/completed, 1 = error, 2 = waiting (blocked remaining)
+
+### plan load JSON task fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `id` | yes | Temporary ID for dependency references |
+| `title` | yes | Task title |
+| `description` | no | Task description |
+| `priority` | no | Integer, default 0. Higher = picked first |
+| `agent` | no | Pre-assigned agent name for routing |
+| `after` | no | List of task IDs this depends on |
+| `documents` | no | List of `{title, content}` |
+
+### Task commands quick reference
+
+```bash
+taskai task add "Title" --agent "bot" --priority 5 --after <ID>
+taskai task list --json
+taskai task show <ID> --json
+taskai task start <ID> --agent "bot"
+taskai task done <ID>
+taskai task fail <ID>          # in_progress → ready (or blocked)
+taskai task skip <ID>          # ready|blocked → skipped
+taskai task cancel <ID>
+taskai task dep add <ID> <DEP_ID>
+taskai task dep remove <ID> <DEP_ID>
+taskai next --json             # read-only peek
+taskai next --claim --agent "bot" --json  # atomic claim
+taskai status --json
+```
+
+---
+
 ## TOOL POLICY (STRICT DEFAULT, FAST EXCEPTIONS)
 
 For code/markdown/json work, this skill is a strict **default** policy with practical exceptions.

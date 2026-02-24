@@ -1,6 +1,6 @@
 # worktoolai-skill
 
-Claude Code skill plugin that wraps the worktoolai CLI tools (`codeai`, `markdownai`, `jsonai`).
+Claude Code skill plugin that wraps the worktoolai CLI tools (`taskai`, `codeai`, `markdownai`, `jsonai`).
 
 ## Language
 
@@ -23,8 +23,9 @@ skills/worktoolai/
 
 ## CLI Binary Locations
 
-- Install path: `~/.worktoolai/bin/{codeai,markdownai,jsonai}`
+- Install path: `~/.worktoolai/bin/{taskai,codeai,markdownai,jsonai}`
 - Source repos (sibling directories under `~/work/ai/`):
+  - `taskai` — Task orchestration
   - `jsonai` — JSON manipulation
   - `markdownai` — Markdown processing
   - `codeai` — Code analysis
@@ -38,6 +39,7 @@ This repo does not have automated releases. Changes are committed directly to `m
 
 Before committing SKILL.md changes, verify that every documented command/flag is accurate:
 ```bash
+~/.worktoolai/bin/taskai --help
 ~/.worktoolai/bin/codeai --help
 ~/.worktoolai/bin/markdownai --help
 ~/.worktoolai/bin/jsonai --help
