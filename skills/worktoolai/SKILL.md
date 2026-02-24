@@ -1,6 +1,6 @@
 ---
 name: worktoolai
-description: "Use for code/markdown/JSON read/search/analyze/edit tasks. Prefer codeai/markdownai/jsonai CLI via Bash; allow Read/Grep/Glob when they are clearly faster for narrow lookups."
+description: "Use for code/markdown/JSON read/search/analyze/edit tasks and task orchestration (plan load, next task, dependencies, agent routing). Prefer taskai/codeai/markdownai/jsonai CLI via Bash; allow Read/Grep/Glob when they are clearly faster for narrow lookups."
 ---
 
 # worktoolai
@@ -86,7 +86,7 @@ taskai status --json
 
 For code/markdown/json work, this skill is a strict **default** policy with practical exceptions.
 
-- **Default path**: use `codeai`, `markdownai`, `jsonai` (via Bash)
+- **Default path**: use `taskai`, `codeai`, `markdownai`, `jsonai` (via Bash)
 - **Allowed fast path**: use `Read`, `Grep`, `Glob` when they are clearly faster (targeted lookup/discovery)
 - **Never use shell text tools for primary analysis**: `cat/grep/sed/awk/head/tail`
 
@@ -135,6 +135,7 @@ These commands give high-level context without reading full file contents.
 
 ## Router
 
+- Task orchestration (plan/task/dependency/agent/next/status): **taskai**
 - Source code task (function/class/import/flow/refactor): **codeai**
 - Markdown docs/notes/sections/search/edit: **markdownai**
 - JSON config/data/query/update: **jsonai**
