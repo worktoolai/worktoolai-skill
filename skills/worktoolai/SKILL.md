@@ -89,6 +89,10 @@ Useful flags (by command):
 - `graph`: `--depth <N>`, `--limit <N>`, `--offset <N>`, `--external`
 - `project get`: `--path <prefix>`, `--fmt thin`, `--max-bytes <N>`
 
+**Important: `codeai index --full` for schema updates**
+- If you already indexed code before the stemmer/identifier split feature was added, run `codeai index --full` once.
+- This recreates the search index to pick up the new tokenizer configuration.
+
 Supported languages: go, rust, python, typescript, tsx, javascript, jsx, java, kotlin, c, cpp, csharp, swift, scala, ruby, php, bash, hcl
 Block kinds: function, method, class, struct, interface, trait, enum, impl, module, namespace, block, object, protocol
 
@@ -106,6 +110,24 @@ Block kinds: function, method, class, struct, interface, trait, enum, impl, modu
   - `jsonai`: `search --field/--match` or `query -f` for exact paths/filters
 - Empty result means "no matches" (not command failure); broaden/normalize and retry.
 - Before language-specific queries, verify relevant files exist first.
+
+### codeai search capabilities (what works, what doesn't)
+
+**What's supported** (English stemmer + identifier split):
+- Word-form matching via English stemmer: `validate` matches `ValidateAccessToken`, `ValidationHelper`, `validates`
+- CamelCase/PascalCase/snake_case word splitting: `AccessToken` indexed as `Access Token`
+  - `"authentication"` matches `Authenticate`, `useAuth` (stems to `authent`)
+  - `"validation"` matches `ValidateAccessToken`, `Valid` (stems to `valid`)
+- Multi-word conjunctive queries: `"auth user"` matches both `auth` AND `user` (conjunction mode)
+
+**What's NOT supported** (use other tools):
+- True natural language semantic search (no embeddings, no LLM understanding)
+  - `"usage user resolve email unknown"` → 0 results (use simpler keyword queries instead)
+- Literal exact string search across all files (e.g., `admin@tokenai.local`, SQL queries)
+  - Use `Grep` with exact pattern: `Grep --path /Users/bjm/work/ai/tokenai --pattern admin@tokenai.local`
+- Cross-language import tracking (Python → Go → SQL → TypeScript)
+  - `graph` command tracks imports within one language only
+  - Cross-language relationships are runtime contracts (HTTP, DB), not static imports
 
 ---
 
