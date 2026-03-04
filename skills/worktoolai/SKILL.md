@@ -1,6 +1,6 @@
 ---
 name: worktoolai
-description: MUST invoke for ANY file read/search/edit task on code (.ts/.js/.py/.go/.rs/etc), markdown (.md), or JSON (.json). Hooks block raw Read/Grep/Glob for these types. Use codeai/markdownai/jsonai CLI via Bash. Also handles task orchestration (taskai). Only skip for non-code/non-md/non-json files.
+description: MUST invoke for ANY file read/search task on code (.ts/.js/.py/.go/.rs/etc), markdown (.md), or JSON (.json). Hooks block raw Read/Grep/Glob for these types. Use codeai/markdownai/jsonai CLI via Bash. Also handles task orchestration (taskai). Only skip for non-code/non-md/non-json files.
 ---
 
 # worktoolai
@@ -65,7 +65,7 @@ Task orchestration CLI. Manages plans, tasks with dependencies, and agent assign
 
 ## codeai
 
-Source code analysis, navigation, and editing. Supports: go, rust, python, typescript, tsx, javascript, jsx, java, kotlin, c, cpp, csharp, swift, scala, ruby, php, bash, hcl
+Source code analysis and navigation. Supports: go, rust, python, typescript, tsx, javascript, jsx, java, kotlin, c, cpp, csharp, swift, scala, ruby, php, bash, hcl
 
 **Commands**:
 - `index` — build/update index. Flags: `--full`, `--path PREFIX`, `--lang LANG`, `--no-gitignore`, `--no-default-ignores`, `--ignore-file FILE`
@@ -74,8 +74,6 @@ Source code analysis, navigation, and editing. Supports: go, rust, python, types
 - `open` — read block/range. Flags: `--symbol ID`, `--symbols ID...`, `--range FILE:START:END`, `--preview-lines N`, `--offset N`, `--fmt json|thin|lines`, `--max-bytes N`
 - `graph PATH` — show import/dependency graph. Flags: `--depth N`, `--limit N`, `--offset N`, `--external`, `--fmt tree|thin`, `--max-bytes N`
 - `project get` — infer entrypoint/shared/orphan structure. Flags: `--path PREFIX`, `--fmt thin`, `--max-bytes N`
-- `write FILE` — create/overwrite file. Flags: `-c CONTENT`, `--content-file FILE`, `--dry-run`. Escape: `\n`→newline, `\t`→tab
-- `edit FILE` — replace line range. Flags: `--range L10-L15`, `-c CONTENT`, `--content-file FILE`, `--dry-run`. 1-based inclusive range
 
 **Block kinds**: function, method, class, struct, interface, trait, enum, impl, module, namespace, block, object, protocol
 
@@ -233,16 +231,9 @@ markdownai section-set docs/guide.md --section "## Installation" --content-file 
 markdownai section-set docs/guide.md --section "## Installation" --content-file /tmp/new_content.txt
 ```
 
-### Write new files
+### Write new markdown file
 ```bash
-# Create new code file
-codeai write src/utils/helper.ts -c "export function greet(name: string): string {\n  return \`Hello \${name}\`;\n}"
-
-# Create new markdown file
 markdownai write docs/setup.md -c "# Setup Guide\n\n## Prerequisites\n\nNode.js 18+\n\n## Installation\n\nnpm install"
-
-# Edit specific lines in code
-codeai edit src/main.rs --range L10-L15 -c "    let result = compute();\n    println!(\"{}\", result);"
 ```
 
 ## Response Discipline
