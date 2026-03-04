@@ -65,7 +65,7 @@ Task orchestration CLI. Manages plans, tasks with dependencies, and agent assign
 
 ## codeai
 
-Source code analysis and navigation. Supports: go, rust, python, typescript, tsx, javascript, jsx, java, kotlin, c, cpp, csharp, swift, scala, ruby, php, bash, hcl
+Source code analysis, navigation, and editing. Supports: go, rust, python, typescript, tsx, javascript, jsx, java, kotlin, c, cpp, csharp, swift, scala, ruby, php, bash, hcl
 
 **Commands**:
 - `index` — build/update index. Flags: `--full`, `--path PREFIX`, `--lang LANG`, `--no-gitignore`, `--no-default-ignores`, `--ignore-file FILE`
@@ -74,6 +74,8 @@ Source code analysis and navigation. Supports: go, rust, python, typescript, tsx
 - `open` — read block/range. Flags: `--symbol ID`, `--symbols ID...`, `--range FILE:START:END`, `--preview-lines N`, `--offset N`, `--fmt json|thin|lines`, `--max-bytes N`
 - `graph PATH` — show import/dependency graph. Flags: `--depth N`, `--limit N`, `--offset N`, `--external`, `--fmt tree|thin`, `--max-bytes N`
 - `project get` — infer entrypoint/shared/orphan structure. Flags: `--path PREFIX`, `--fmt thin`, `--max-bytes N`
+- `write FILE` — create/overwrite file. Flags: `-c CONTENT`, `--content-file FILE`, `--dry-run`. Escape: `\n`→newline, `\t`→tab
+- `edit FILE` — replace line range. Flags: `--range L10-L15`, `-c CONTENT`, `--content-file FILE`, `--dry-run`. 1-based inclusive range
 
 **Block kinds**: function, method, class, struct, interface, trait, enum, impl, module, namespace, block, object, protocol
 
@@ -87,7 +89,6 @@ Source code analysis and navigation. Supports: go, rust, python, typescript, tsx
 **Important**: Run `codeai index --full` once if you indexed before stemmer/identifier split feature was added.
 
 ## markdownai
-
 Markdown analysis, search, and editing.
 
 **Commands**:
@@ -100,13 +101,21 @@ Markdown analysis, search, and editing.
 - `links FILE` — show links. Flags: `--type wiki|markdown|all`, `--resolved`, `--broken`, `--json`, `--max-bytes N`
 - `backlinks FILE` — show backlinks. Flags: `--root DIR`, `--json`, `--max-bytes N`
 - `graph PATH` — link graph. Flags: `--format adjacency|edges|stats`, `--start FILE`, `--depth N`, `--orphans`, `--root DIR`, `--json`, `--max-bytes N`
-- `section-set FILE --section ADDR` — replace section. Flags: `--content TEXT`, `--content-file FILE`, `--dry-run`, `--output FILE`, `--with-toc`
-- `section-add FILE --title TITLE` — add section. Flags: `--content TEXT`, `--content-file FILE`, `--dry-run`, `--output FILE`, `--with-toc`
+- `write FILE` — create/overwrite file. Flags: `-c CONTENT`, `--content-file FILE`, `--dry-run`. Escape: `\n`→newline, `\t`→tab
+- `section-set FILE --section ADDR` — replace section body only (headings forbidden in content). Flags: `-c TEXT`, `--content-file FILE`, `--dry-run`, `--output FILE`, `--with-toc`
+- `section-replace FILE --section ADDR` — replace entire section including heading (content must start with heading). Flags: `-c TEXT`, `--content-file FILE`, `--dry-run`, `--output FILE`, `--with-toc`
+- `section-add FILE --title TITLE` — add new section. Flags: `-c TEXT`, `--content-file FILE`, `--after ADDR`, `--before ADDR`, `--level N`, `--dry-run`, `--output FILE`, `--with-toc`
 - `section-delete FILE --section ADDR` — delete section. Flags: `--dry-run`, `--output FILE`, `--with-toc`
-- `frontmatter-set FILE` — set frontmatter. Flags: `--content TEXT`, `--content-file FILE`, `--dry-run`, `--output FILE`
+- `frontmatter-set FILE` — set frontmatter field. Flags: `-k KEY`, `-v VALUE`, `--dry-run`, `--output FILE`
 - `renum FILE` — renumber headings. Flags: `--dry-run`, `--output FILE`
 - `chars` — count characters. Input: file, directory, or stdin. Flags: `--json`, `--max-bytes N`
 - `index DIR` — build search index. Flags: `--force`, `--status`, `--dry-run`, `--check`, `--sync auto|force`, `--root DIR`
+
+**Section mutation rules**:
+- `section-set`: body only, content with `#` headings → error
+- `section-replace`: heading+body, content must start with `#` heading → error if not
+- `section-add`: creates new section with heading
+- `section-delete`: removes heading+body
 
 **Section addressing**: `"#1.2"` (TOC index), `"## A > ### B"` (header path), `"L10-L25"` (line range)
 
@@ -115,7 +124,6 @@ Markdown analysis, search, and editing.
 - If inline: use single quotes or ANSI-C quotes (`$'content\n'`)
 - Never use double quotes with backticks (command substitution)
 - Keep list bullets as one argument (quote the whole payload)
-
 ## jsonai
 
 JSON query and editing.
@@ -223,6 +231,18 @@ codeai search "authentication middleware" --path src/ --lang typescript --fmt js
 echo "New content here" > /tmp/new_content.txt
 markdownai section-set docs/guide.md --section "## Installation" --content-file /tmp/new_content.txt --dry-run
 markdownai section-set docs/guide.md --section "## Installation" --content-file /tmp/new_content.txt
+```
+
+### Write new files
+```bash
+# Create new code file
+codeai write src/utils/helper.ts -c "export function greet(name: string): string {\n  return \`Hello \${name}\`;\n}"
+
+# Create new markdown file
+markdownai write docs/setup.md -c "# Setup Guide\n\n## Prerequisites\n\nNode.js 18+\n\n## Installation\n\nnpm install"
+
+# Edit specific lines in code
+codeai edit src/main.rs --range L10-L15 -c "    let result = compute();\n    println!(\"{}\", result);"
 ```
 
 ## Response Discipline
