@@ -1,30 +1,140 @@
 ---
 name: worktoolai
-description: "Use for code/markdown/JSON read/search/analyze/edit tasks and task orchestration (plan load, next task, dependencies, agent routing). Prefer taskai/codeai/markdownai/jsonai CLI via Bash; allow Read/Grep/Glob when they are clearly faster for narrow lookups."
+description: MUST invoke for ANY file read/search/edit task on code (.ts/.js/.py/.go/.rs/etc), markdown (.md), or JSON (.json). Hooks block raw Read/Grep/Glob for these types. Use codeai/markdownai/jsonai CLI via Bash. Also handles task orchestration (taskai). Only skip for non-code/non-md/non-json files.
 ---
 
 # worktoolai
 
-## taskai (task orchestration)
+## Router
 
-AI agent task orchestration CLI. Manages plans, tasks with dependencies, and agent assignment.
+- Task orchestration (plan/task/dependency/agent/next/status): **taskai**
+- Source code (function/class/import/flow/refactor): **codeai**
+- Markdown docs/notes/sections/search/edit: **markdownai**
+- JSON config/data/query/update: **jsonai**
 
-**Setup**: Requires a git repo. Run `taskai init` first. DB stored at `<git-root>/.worktoolai/taskai/taskai.db`.
+## Tool Policy
 
-Help-verified commands:
+**Default**: use `taskai`, `codeai`, `markdownai`, `jsonai` via Bash for code/markdown/json work.
+
+**Fast path allowed**: use `Read`, `Grep`, `Glob` when clearly faster (exact path known, quick regex lookup, simple discovery).
+
+**Never use**: `cat/grep/sed/awk/head/tail` for primary analysis.
+
+**Rules**:
+1. Choose fastest valid path
+2. Prefer `*ai` CLIs for structured/deep analysis and updates
+3. You MAY use `Read/Grep/Glob` when: exact path known, narrow lookup needed, or `*ai` overhead exceeds gain
+4. Keep output compact: `--fmt json`, `--json`, `--limit`, `--max-bytes`, `--count-only`
+5. Include proof: `TOOL_PROOF: <command>` or `FALLBACK_REASON: <why>`
+6. If `*ai` fails: run `<tool> --help` and retry once, then fallback to generic tools
+
+## taskai
+
+Task orchestration CLI. Manages plans, tasks with dependencies, and agent assignment.
+
+**Setup**: Requires git repo. Run `taskai init` first. DB stored at `<git-root>/.worktoolai/taskai/taskai.db`.
+
+**Commands**:
 - `init` — initialize DB in git repo
 - `plan create|list|show|activate|delete|load` — plan lifecycle
 - `task add|list|show|start|done|fail|skip|cancel` — task lifecycle
-- `task dep add|remove` — manage task dependencies
+- `task dep add|remove` — manage dependencies
 - `next` — get next ready task (highest priority, then sort order)
 - `status` — show overall progress
 
-Global flags: `--json`, `--plan <NAME|ID>`
+**Global flags**: `--json`, `--plan <NAME|ID>`
 
-### Orchestrator loop (primary use case)
+**Key concepts**:
+- **`agent`** field: pre-assigned at creation (who should execute). Set via `task add --agent` or `"agent"` in JSON.
+- **`assigned_to`** field: set at runtime when claimed. Set via `next --claim --agent` or `task start --agent`.
+- **Status flow**: `blocked` → `ready` → `in_progress` → `done` / `cancelled` / `skipped`
+- **Unblock rule**: only `done` unblocks dependents. `cancelled`/`skipped` do NOT.
+- **Exit codes**: 0 = success/completed, 1 = error, 2 = waiting (blocked remaining)
 
+**plan load JSON fields**:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `id` | yes | Temporary ID for dependency references |
+| `title` | yes | Task title |
+| `description` | no | Task description |
+| `priority` | no | Integer, default 0. Higher = picked first |
+| `agent` | no | Pre-assigned agent name |
+| `after` | no | List of task IDs this depends on |
+| `documents` | no | List of `{title, content}` |
+
+## codeai
+
+Source code analysis and navigation. Supports: go, rust, python, typescript, tsx, javascript, jsx, java, kotlin, c, cpp, csharp, swift, scala, ruby, php, bash, hcl
+
+**Commands**:
+- `index` — build/update index. Flags: `--full`, `--path PREFIX`, `--lang LANG`, `--no-gitignore`, `--no-default-ignores`, `--ignore-file FILE`
+- `search QUERY` — find code blocks. Flags: `--limit N`, `--path PREFIX`, `--lang LANG`, `--fmt json|thin|lines`, `--cursor CURSOR`, `--max-bytes N`
+- `outline PATH` — list blocks in file. Flags: `--kind KIND`, `--limit N`, `--fmt json|thin|lines`, `--cursor CURSOR`, `--max-bytes N`
+- `open` — read block/range. Flags: `--symbol ID`, `--symbols ID...`, `--range FILE:START:END`, `--preview-lines N`, `--offset N`, `--fmt json|thin|lines`, `--max-bytes N`
+- `graph PATH` — show import/dependency graph. Flags: `--depth N`, `--limit N`, `--offset N`, `--external`, `--fmt tree|thin`, `--max-bytes N`
+- `project get` — infer entrypoint/shared/orphan structure. Flags: `--path PREFIX`, `--fmt thin`, `--max-bytes N`
+
+**Block kinds**: function, method, class, struct, interface, trait, enum, impl, module, namespace, block, object, protocol
+
+**Search tips**:
+- Semantic keyword lookup (not regex): `"service update method"` not `func \(s \*Service\) Update`
+- Keep queries short (2-5 words): `"index incremental generation"`
+- Narrow with flags (`--path`, `--lang`, `--limit`), not punctuation
+- Stemmer + identifier split: `"authentication"` matches `Authenticate`, `useAuth`, `ValidateAccessToken`
+- Empty result = no matches (not error); broaden and retry
+
+**Important**: Run `codeai index --full` once if you indexed before stemmer/identifier split feature was added.
+
+## markdownai
+
+Markdown analysis, search, and editing.
+
+**Commands**:
+- `toc FILE` — show table of contents. Flags: `--depth N`, `--flat`, `--json`, `--pretty`, `--max-bytes N`
+- `read FILE` — read file/section. Flags: `--section ADDR`, `--summary [N]`, `--meta`, `--json`, `--pretty`, `--max-bytes N`
+- `tree DIR` — directory structure. Flags: `--depth N`, `--files-only`, `--count`, `--json`, `--max-bytes N`
+- `search PATH -q QUERY` — search. Flags: `--match text|exact|fuzzy|regex`, `--scope all|body|headers|frontmatter|code`, `--context N`, `--bare`, `--limit N`, `--offset N`, `--threshold N`, `--count-only`, `--json`, `--max-bytes N`
+- `frontmatter PATH` — query frontmatter. Flags: `--field FIELD`, `--filter EXPR`, `--list`, `--facets FIELD`, `--json`, `--max-bytes N`
+- `overview PATH` — file-level summary. Flags: `--field FIELD`, `--filter EXPR`, `--sort FIELD|name|lines|sections`, `--reverse`, `--limit N`, `--offset N`, `--json`, `--max-bytes N`
+- `links FILE` — show links. Flags: `--type wiki|markdown|all`, `--resolved`, `--broken`, `--json`, `--max-bytes N`
+- `backlinks FILE` — show backlinks. Flags: `--root DIR`, `--json`, `--max-bytes N`
+- `graph PATH` — link graph. Flags: `--format adjacency|edges|stats`, `--start FILE`, `--depth N`, `--orphans`, `--root DIR`, `--json`, `--max-bytes N`
+- `section-set FILE --section ADDR` — replace section. Flags: `--content TEXT`, `--content-file FILE`, `--dry-run`, `--output FILE`, `--with-toc`
+- `section-add FILE --title TITLE` — add section. Flags: `--content TEXT`, `--content-file FILE`, `--dry-run`, `--output FILE`, `--with-toc`
+- `section-delete FILE --section ADDR` — delete section. Flags: `--dry-run`, `--output FILE`, `--with-toc`
+- `frontmatter-set FILE` — set frontmatter. Flags: `--content TEXT`, `--content-file FILE`, `--dry-run`, `--output FILE`
+- `renum FILE` — renumber headings. Flags: `--dry-run`, `--output FILE`
+- `chars` — count characters. Input: file, directory, or stdin. Flags: `--json`, `--max-bytes N`
+- `index DIR` — build search index. Flags: `--force`, `--status`, `--dry-run`, `--check`, `--sync auto|force`, `--root DIR`
+
+**Section addressing**: `"#1.2"` (TOC index), `"## A > ### B"` (header path), `"L10-L25"` (line range)
+
+**Shell quoting for edits**:
+- Prefer `--content-file FILE` for multi-line content or content with backticks
+- If inline: use single quotes or ANSI-C quotes (`$'content\n'`)
+- Never use double quotes with backticks (command substitution)
+- Keep list bullets as one argument (quote the whole payload)
+
+## jsonai
+
+JSON query and editing.
+
+**Commands**:
+- `cat FILE` — display JSON. Flags: `--pointer /path`, `--pretty`, `--compact`
+- `search FILE -q TERM` — search. Flags: `--field FIELD` (repeatable), `--all`, `--match text|exact|fuzzy|regex`, `--output match|hit|value`, `--select FIELDS`, `--limit N`, `--offset N`, `--count-only`, `--bare`, `--max-bytes N`, `--threshold N`, `--schema FILE`
+- `fields FILE` — list fields. Flags: `--schema FILE`
+- `query FILE -f FILTER` — jq filter. Flags: `--filter JQ_EXPR`
+- `set FILE --pointer /path VALUE` — set value. Flags: `--output FILE`, `--dry-run`, `--pretty`, `--compact`
+- `add FILE --pointer /path VALUE` — add value. Flags: `--output FILE`, `--dry-run`, `--pretty`, `--compact`
+- `delete FILE --pointer /path` — delete value. Flags: `--output FILE`, `--dry-run`, `--pretty`, `--compact`
+- `patch FILE --patch DOC` — apply JSON patch. Flags: `--output FILE`, `--dry-run`, `--pretty`, `--compact`
+
+## Best Practices
+
+### Orchestrator loop
 ```bash
-# Load a plan from JSON
+# Load plan from JSON
 echo '{"name":"my-plan","title":"My Plan","tasks":[
   {"id":"t1","title":"Setup","agent":"claude-code","priority":10},
   {"id":"t2","title":"Build","agent":"claude-code","after":["t1"]},
@@ -34,252 +144,11 @@ echo '{"name":"my-plan","title":"My Plan","tasks":[
 # Agent loop: claim → execute → done
 while true; do
   TASK=$(taskai next --claim --agent "my-agent" --json)
-  # exit 0 + plan_completed=true → done
-  # exit 2 → waiting (blocked/in_progress remain)
   TASK_ID=$(echo "$TASK" | jq -r '.data.task.id')
   # ... execute task ...
   taskai task done "$TASK_ID" --json
 done
 ```
-
-### Key concepts
-
-- **`agent`** field: pre-assigned at creation (who *should* execute). Set via `task add --agent` or `"agent"` in `plan load` JSON.
-- **`assigned_to`** field: set at runtime when claimed (who *actually* claimed). Set via `next --claim --agent` or `task start --agent`.
-- **Status flow**: `blocked` → `ready` → `in_progress` → `done` / `cancelled` / `skipped`
-- **Unblock rule**: only `done` unblocks dependents. `cancelled`/`skipped` do NOT.
-- **Exit codes**: 0 = success/completed, 1 = error, 2 = waiting (blocked remaining)
-
-### plan load JSON task fields
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | yes | Temporary ID for dependency references |
-| `title` | yes | Task title |
-| `description` | no | Task description |
-| `priority` | no | Integer, default 0. Higher = picked first |
-| `agent` | no | Pre-assigned agent name for routing |
-| `after` | no | List of task IDs this depends on |
-| `documents` | no | List of `{title, content}` |
-
-### Task commands quick reference
-
-```bash
-taskai task add "Title" --agent "bot" --priority 5 --after <ID>
-taskai task list --json
-taskai task show <ID> --json
-taskai task start <ID> --agent "bot"
-taskai task done <ID>
-taskai task fail <ID>          # in_progress → ready (or blocked)
-taskai task skip <ID>          # ready|blocked → skipped
-taskai task cancel <ID>
-taskai task dep add <ID> <DEP_ID>
-taskai task dep remove <ID> <DEP_ID>
-taskai next --json             # read-only peek
-taskai next --claim --agent "bot" --json  # atomic claim
-taskai status --json
-```
-
----
-
-## TOOL POLICY (STRICT DEFAULT, FAST EXCEPTIONS)
-
-For code/markdown/json work, this skill is a strict **default** policy with practical exceptions.
-
-- **Default path**: use `taskai`, `codeai`, `markdownai`, `jsonai` (via Bash)
-- **Allowed fast path**: use `Read`, `Grep`, `Glob` when they are clearly faster (targeted lookup/discovery)
-- **Never use shell text tools for primary analysis**: `cat/grep/sed/awk/head/tail`
-
-## Hard rules (prompt contract)
-
-1. Choose the fastest valid tool path for the task.
-2. Prefer `*ai` CLIs for structured/deep analysis and updates.
-3. You MAY use `Read/Grep/Glob` immediately when any of these apply:
-   - exact file path or symbol location is already known
-   - narrow regex/string lookup across files is needed
-   - quick file discovery by pattern is needed
-   - `*ai` indexing/startup overhead is higher than expected gain
-4. Keep output compact (`--fmt json`, `--json`, `--limit`, `--max-bytes`, `--count-only` when useful).
-5. Include one-line proof in final answer:
-   - `TOOL_PROOF: <exact command(s) or tool call(s)>`
-   - If generic tools were used: `FALLBACK_REASON: <why generic was faster>`
-6. If a `*ai` CLI fails:
-   - run `<tool> --help` and retry once
-   - if still blocked, use `Read/Grep/Glob` with `FALLBACK_REASON`
-
-> Install/setup: [references/install.md](references/install.md)
-
----
-
-## When to use for initial project analysis
-
-When first encountering an unfamiliar codebase or markdown knowledge base, use these tools to build a mental model quickly:
-
-**Code projects** — use `codeai` to understand structure before diving into files:
-1. `codeai index` — build the block index (incremental, fast on repeat)
-2. `codeai project get --fmt thin` — infer entrypoints, shared modules, and orphans from the dependency graph.
-   - **Multi-project / monorepo**: always split by subproject with `--path <subdir>`. Running on the whole repo mixes languages/frameworks and produces unusable results.
-   - e.g. `codeai project get --path backend --fmt thin` → `codeai project get --path frontend --fmt thin`
-3. `codeai graph <entry-file> --fmt thin --depth 2` — trace imports from a key entry point
-4. `codeai outline <file> --fmt thin` — list functions/classes/structs in a file
-
-**Markdown knowledge bases** — use `markdownai` to survey docs before reading:
-1. `markdownai tree <dir> --depth 2` — directory structure of markdown files
-2. `markdownai overview <dir> --json --limit 30` — file-level summary with frontmatter + structure metadata (line count, section count, etc.)
-3. `markdownai search <dir> -q "<topic>" --scope headers --json --limit 20` — find relevant sections by header
-4. `markdownai frontmatter <dir> --facets tags --json` — discover tag/category distribution
-
-These commands give high-level context without reading full file contents.
-
----
-
-## Router
-
-- Task orchestration (plan/task/dependency/agent/next/status): **taskai**
-- Source code task (function/class/import/flow/refactor): **codeai**
-- Markdown docs/notes/sections/search/edit: **markdownai**
-- JSON config/data/query/update: **jsonai**
-
----
-
-## codeai (code)
-
-Help-verified commands:
-- `index` — build/update index
-- `search <QUERY>` — find code blocks
-- `outline <PATH>` — list blocks in a file
-- `open --symbol <ID>` / `open --symbols ...` / `open --range ...` — read block/range
-- `graph <PATH>` — show import/dependency graph from entry file
-- `project get` — infer entrypoint/shared/orphan project structure
-
-Recommended flow:
-1. `codeai index`
-2. `codeai search "<query>" --fmt json --limit 10`
-3. `codeai open --symbol "<symbol-id>" --fmt json`
-4. (Optional) `codeai outline <file> --fmt json` / `codeai graph <file> --fmt thin`
-
-Useful flags (by command):
-- Common: `--fmt thin|json|lines` (`graph`: `tree|thin`, `project get`: `thin`), `--max-bytes <N>`
-- `index`: `--full`, `--path <prefix>`, `--lang <language>`, `--no-gitignore`, `--no-default-ignores`, `--ignore-file <FILE>`
-- `search`: `--limit <N>`, `--path <prefix>`, `--lang <language>`, `--cursor <cursor>`
-- `outline`: `--kind <KIND>`, `--limit <N>`, `--cursor <cursor>`
-- `open`: `--symbol`, `--symbols`, `--range`, `--preview-lines <N>` (default 80), `--offset <N>`
-- `graph`: `--depth <N>`, `--limit <N>`, `--offset <N>`, `--external`
-- `project get`: `--path <prefix>`, `--fmt thin`, `--max-bytes <N>`
-
-**Important: `codeai index --full` for schema updates**
-- If you already indexed code before the stemmer/identifier split feature was added, run `codeai index --full` once.
-- This recreates the search index to pick up the new tokenizer configuration.
-
-Supported languages: go, rust, python, typescript, tsx, javascript, jsx, java, kotlin, c, cpp, csharp, swift, scala, ruby, php, bash, hcl
-Block kinds: function, method, class, struct, interface, trait, enum, impl, module, namespace, block, object, protocol
-
-### Search query guide (all tools, avoid agent confusion)
-
-- Treat search as semantic keyword lookup, not regex/signature matching.
-- Do **not** use escaped signatures/special chars as the primary query.
-  - Bad: `func \(s \*Service\) Update`
-  - Good: `service update method`
-- Keep query short (2-5 tokens): `<target> <action> <context>`
-  - Example: `index incremental generation`
-- Narrow with tool flags, not punctuation:
-  - `codeai`: `--path`, `--lang`, `--limit`
-  - `markdownai`: `--limit`, `--offset`, `--match`, `--scope`, `--threshold`
-  - `jsonai`: `search --field/--match` or `query -f` for exact paths/filters
-- Empty result means "no matches" (not command failure); broaden/normalize and retry.
-- Before language-specific queries, verify relevant files exist first.
-
-### codeai search capabilities (what works, what doesn't)
-
-**What's supported** (English stemmer + identifier split):
-- Word-form matching via English stemmer: `validate` matches `ValidateAccessToken`, `ValidationHelper`, `validates`
-- CamelCase/PascalCase/snake_case word splitting: `AccessToken` indexed as `Access Token`
-  - `"authentication"` matches `Authenticate`, `useAuth` (stems to `authent`)
-  - `"validation"` matches `ValidateAccessToken`, `Valid` (stems to `valid`)
-- Multi-word conjunctive queries: `"auth user"` matches both `auth` AND `user` (conjunction mode)
-
-**What's NOT supported** (use other tools):
-- True natural language semantic search (no embeddings, no LLM understanding)
-  - `"usage user resolve email unknown"` → 0 results (use simpler keyword queries instead)
-- Literal exact string search across all files (e.g., `admin@tokenai.local`, SQL queries)
-  - Use `Grep` with exact pattern: `Grep --path /Users/bjm/work/ai/tokenai --pattern admin@tokenai.local`
-- Cross-language import tracking (Python → Go → SQL → TypeScript)
-  - `graph` command tracks imports within one language only
-  - Cross-language relationships are runtime contracts (HTTP, DB), not static imports
-
----
-
-## markdownai (markdown)
-
-Help-verified commands:
-- `toc` `read` `tree` `search` `frontmatter` `overview` `links` `backlinks` `graph`
-- `section-set` `section-add` `section-delete` `frontmatter-set` `renum` `chars` `index`
-
-Recommended flow:
-1. `markdownai toc <file> --json`
-2. `markdownai read <file> --section "<addr>" --json`
-3. `markdownai search <dir-or-file> -q "<query>" --json --limit 20`
-4. Modify with `section-set|section-add|section-delete|frontmatter-set` when needed
-
-Useful flags (common):
-- `--json` `--pretty` `--max-bytes <N>`
-- `--limit <N>` `--offset <N>` `--threshold <N>`
-- `--count-only` `--exists` `--stats` `--plan` `--no-overflow`
-- `--facets <FIELD>` `--sync auto|force` `--root <DIR>`
-
-Command-specific highlights:
-- `toc`: `--depth <N>`, `--flat`
-- `read`: `--section`, `--summary [N]`, `--meta`
-- `search`: `--match text|exact|fuzzy|regex`, `--scope all|body|headers|frontmatter|code`, `--context <N>`, `--bare`
-- `tree`: `--depth <N>`, `--files-only`, `--count`
-- `overview`: `--field <FIELD>` (repeatable), `--filter '<expr>'`, `--sort <FIELD|name|lines|sections>`, `--reverse`
-- `frontmatter`: `--field <FIELD>`, `--filter '<expr>'`, `--list`
-- `links`: `--type wiki|markdown|all`, `--resolved`, `--broken`
-- `graph`: `--format adjacency|edges|stats`, `--start <FILE>`, `--depth <N>`, `--orphans`
-- `renum`: `--dry-run`, `--output <FILE>`
-- `chars`: (common flags only; input: file, directory, or stdin)
-- `index`: `--force`, `--status`, `--dry-run`, `--check`
-- Write commands (`section-*`, `frontmatter-set`, `renum`): `--dry-run`, `--output <FILE>`, `--with-toc` (where supported), `--content-file <FILE>` (set/add)
-
-Shell quoting safety (for `section-add` / `section-set`):
-- Prefer `--content-file <FILE>` for multi-line content or content containing backticks (`` ` ``).
-- If inline content is required, wrap `--content` with single quotes (`'...'`) or ANSI-C quotes (`$'...'` for `\n`).
-- Do **not** use double quotes for `--content` when payload includes backticks; zsh may run command substitution.
-- Never leave markdown list bullets (`- item`) unquoted; keep the entire payload as one argument.
-- If you see `unexpected argument '- '`, check broken quoting first and retry with `--content-file`.
-
-Section addressing:
-- TOC index: `"#1.2"`
-- Header path: `"## A > ### B"`
-- Line range: `"L10-L25"`
-
----
-
-## jsonai (json)
-
-Help-verified commands:
-- `cat` `search` `fields` `query`
-- `set` `add` `delete` `patch`
-
-Recommended flow:
-1. `jsonai cat <file> --pretty` (or `--pointer /path/to/node` for subtree)
-2. `jsonai search -q "<term>" --all <file>`
-3. `jsonai query -f '<jq-filter>' <file>`
-4. Update with `set|add|delete|patch` as needed (`--dry-run` first when changing files)
-
-Useful flags (common):
-- `--pretty` `--compact`
-
-Command-specific highlights:
-- `cat`: `--pointer <JSON-Pointer>`
-- `search`: `--field <FIELD>` (repeatable), `--all`, `--match text|exact|fuzzy|regex`, `--output match|hit|value`, `--select <FIELDS>`, `--limit`, `--offset`, `--count-only`, `--bare`, `--max-bytes`, `--threshold`, `--plan`, `--no-overflow`, `--schema <FILE>`
-- `fields`: `--schema`
-- `query`: `-f|--filter '<jq-filter>'`
-- Mutating commands (`set|add|delete|patch`): `--output <FILE>`, `--dry-run` (`set|add|delete` use `--pointer`; `patch` uses `--patch <DOC|->`)
-
----
-
-## Minimal playbooks
 
 ### Initial code project analysis
 ```bash
@@ -289,72 +158,75 @@ codeai project get --fmt thin --max-bytes 12000
 # Multi-project / monorepo — split by subdir:
 codeai project get --path backend --fmt thin
 codeai project get --path frontend --fmt thin
-# then drill into key entry points:
-codeai graph <entry-file> --fmt thin --depth 2
-codeai outline <entry-file> --fmt thin
+# Drill into entry points:
+codeai graph src/main.ts --fmt thin --depth 2
+codeai outline src/main.ts --fmt thin
 ```
 
 ### Initial markdown knowledge base survey
 ```bash
-markdownai tree <dir> --depth 2
-markdownai overview <dir> --json --limit 30
-markdownai frontmatter <dir> --facets tags --json
-markdownai search <dir> -q "<topic>" --scope headers --json --limit 20
+markdownai tree docs/ --depth 2
+markdownai overview docs/ --json --limit 30
+markdownai frontmatter docs/ --facets tags --json
+markdownai search docs/ -q "authentication" --scope headers --json --limit 20
 ```
 
-### Find function implementation
+### Find and read a function
 ```bash
 codeai index --path src/
-codeai search "<function-name or behavior>" --fmt json --path src/ --limit 10
-codeai open --symbol "<symbol-id>" --fmt json --preview-lines 80
+codeai search "validateToken" --fmt json --path src/ --limit 10
+codeai open --symbol "src/auth.ts#function#validateToken" --fmt json --preview-lines 80
 ```
 
-### Inspect dependency graph from entry file
+### Inspect dependency graph
 ```bash
-codeai graph <entry-file> --fmt thin --depth 2 --limit 20
+codeai graph src/index.ts --fmt thin --depth 2 --limit 20
 ```
 
-### Infer project structure from index
+### Analyze monorepo subproject
 ```bash
-codeai project get --fmt thin --max-bytes 12000
+# Use --path to filter by directory (avoids mixed-language noise)
+codeai project get --path tokenai-proxy --fmt thin        # Go only
+codeai project get --path tokenai-admin-front --fmt thin   # TS only
 ```
 
-### Analyze a subproject in a monorepo
+### Read one markdown section
 ```bash
-# Use --path to filter by directory prefix (avoids mixed-language noise)
-codeai project get --path tokenai-proxy --fmt thin        # Go subproject only
-codeai project get --path tokenai-admin-front --fmt thin   # TS subproject only
-codeai project get --fmt thin                              # full monorepo (default)
+markdownai toc docs/guide.md --json --limit 100
+markdownai read docs/guide.md --section "#1.3" --json --summary 5 --meta
 ```
-When analyzing a monorepo, always use `--path <subdir>` to scope results to one subproject at a time. Without it, entrypoints/shared/orphan lists mix all languages and the output becomes too large to be useful.
 
-### Read only one markdown section
+### Search markdown with scope
 ```bash
-markdownai toc <file> --json --limit 100
-markdownai read <file> --section "#1.3" --json --summary 5 --meta
+markdownai search docs/ -q "deployment" --scope headers --match text --json --limit 20
 ```
 
-### Search markdown with scope/match
+### Extract JSON value
 ```bash
-markdownai search <dir-or-file> -q "<query>" --scope headers --match text --json --limit 20
+jsonai cat config.json --pointer /database/host --pretty
+jsonai query -f '.database.host' config.json
 ```
 
-### Extract one JSON value or subtree
+### Update JSON safely
 ```bash
-jsonai cat <file> --pointer /path/to/node --pretty
-jsonai query -f '.path.to.value' <file>
+jsonai set --pointer /database/port '5432' config.json --dry-run --pretty
+jsonai set --pointer /database/port '5432' config.json --pretty
 ```
 
-### Safely update JSON (dry run first)
+### Search code across files
 ```bash
-jsonai set --pointer /path/to/key '<value-json>' <file> --dry-run --pretty
-jsonai set --pointer /path/to/key '<value-json>' <file> --pretty
+codeai search "authentication middleware" --path src/ --lang typescript --fmt json --limit 10
 ```
 
----
+### Edit markdown section
+```bash
+echo "New content here" > /tmp/new_content.txt
+markdownai section-set docs/guide.md --section "## Installation" --content-file /tmp/new_content.txt --dry-run
+markdownai section-set docs/guide.md --section "## Installation" --content-file /tmp/new_content.txt
+```
 
-## Response discipline
+## Response Discipline
 
-- Do not dump full files if block/section/value access is enough.
-- Prefer targeted reads + small limits.
-- State which *ai command was used when summarizing findings.
+- Do not dump full files if block/section/value access is enough
+- Prefer targeted reads + small limits
+- State which *ai command was used when summarizing findings
