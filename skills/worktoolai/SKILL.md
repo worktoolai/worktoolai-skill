@@ -9,7 +9,7 @@ description: MUST invoke for ANY file read/search task on code (.ts/.js/.py/.go/
 
 - Task orchestration (plan/task/dependency/agent/next/status): **taskai**
 - Source code (function/class/import/flow/refactor): **codeai**
-- Markdown docs/notes/sections/search/edit: **markdownai**
+- Markdown docs/notes/sections/search (read-only): **markdownai**
 - JSON config/data/query/update: **jsonai**
 
 ## Tool Policy
@@ -87,7 +87,7 @@ Source code analysis and navigation. Supports: go, rust, python, typescript, tsx
 **Important**: Run `codeai index --full` once if you indexed before stemmer/identifier split feature was added.
 
 ## markdownai
-Markdown analysis, search, and editing.
+Markdown analysis and search (read-only).
 
 **Commands**:
 - `toc FILE` — show table of contents. Flags: `--depth N`, `--flat`, `--json`, `--pretty`, `--max-bytes N`
@@ -98,30 +98,12 @@ Markdown analysis, search, and editing.
 - `overview PATH` — file-level summary. Flags: `--field FIELD`, `--filter EXPR`, `--sort FIELD|name|lines|sections`, `--reverse`, `--limit N`, `--offset N`, `--json`, `--max-bytes N`
 - `links FILE` — show links. Flags: `--type wiki|markdown|all`, `--resolved`, `--broken`, `--json`, `--max-bytes N`
 - `backlinks FILE` — show backlinks. Flags: `--root DIR`, `--json`, `--max-bytes N`
-- `graph PATH` — link graph. Flags: `--format adjacency|edges|stats`, `--start FILE`, `--depth N`, `--orphans`, `--root DIR`, `--json`, `--max-bytes N`
-- `write FILE` — create/overwrite file. Flags: `-c CONTENT`, `--content-file FILE`, `--dry-run`. Escape: `\n`→newline, `\t`→tab
-- `section-set FILE --section ADDR` — replace section body only (headings forbidden in content). Flags: `-c TEXT`, `--content-file FILE`, `--dry-run`, `--output FILE`, `--with-toc`
-- `section-replace FILE --section ADDR` — replace entire section including heading (content must start with heading). Flags: `-c TEXT`, `--content-file FILE`, `--dry-run`, `--output FILE`, `--with-toc`
-- `section-add FILE --title TITLE` — add new section. Flags: `-c TEXT`, `--content-file FILE`, `--after ADDR`, `--before ADDR`, `--level N`, `--dry-run`, `--output FILE`, `--with-toc`
-- `section-delete FILE --section ADDR` — delete section. Flags: `--dry-run`, `--output FILE`, `--with-toc`
-- `frontmatter-set FILE` — set frontmatter field. Flags: `-k KEY`, `-v VALUE`, `--dry-run`, `--output FILE`
-- `renum FILE` — renumber headings. Flags: `--dry-run`, `--output FILE`
+- `graph PATH` — link graph. Flags: `--format adjacency|edges|stats|orphans`, `--start FILE`, `--depth N`, `--root DIR`, `--json`, `--max-bytes N`
 - `chars` — count characters. Input: file, directory, or stdin. Flags: `--json`, `--max-bytes N`
 - `index DIR` — build search index. Flags: `--force`, `--status`, `--dry-run`, `--check`, `--sync auto|force`, `--root DIR`
 
-**Section mutation rules**:
-- `section-set`: body only, content with `#` headings → error
-- `section-replace`: heading+body, content must start with `#` heading → error if not
-- `section-add`: creates new section with heading
-- `section-delete`: removes heading+body
-
 **Section addressing**: `"#1.2"` (TOC index), `"## A > ### B"` (header path), `"L10-L25"` (line range)
 
-**Shell quoting for edits**:
-- Prefer `--content-file FILE` for multi-line content or content with backticks
-- If inline: use single quotes or ANSI-C quotes (`$'content\n'`)
-- Never use double quotes with backticks (command substitution)
-- Keep list bullets as one argument (quote the whole payload)
 ## jsonai
 
 JSON query and editing.
@@ -222,18 +204,6 @@ jsonai set --pointer /database/port '5432' config.json --pretty
 ### Search code across files
 ```bash
 codeai search "authentication middleware" --path src/ --lang typescript --fmt json --limit 10
-```
-
-### Edit markdown section
-```bash
-echo "New content here" > /tmp/new_content.txt
-markdownai section-set docs/guide.md --section "## Installation" --content-file /tmp/new_content.txt --dry-run
-markdownai section-set docs/guide.md --section "## Installation" --content-file /tmp/new_content.txt
-```
-
-### Write new markdown file
-```bash
-markdownai write docs/setup.md -c "# Setup Guide\n\n## Prerequisites\n\nNode.js 18+\n\n## Installation\n\nnpm install"
 ```
 
 ## Response Discipline
