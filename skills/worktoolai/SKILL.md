@@ -28,6 +28,19 @@ description: MUST invoke for ANY file read/search task on code (.ts/.js/.py/.go/
 5. Include proof: `TOOL_PROOF: <command>` or `FALLBACK_REASON: <why>`
 6. If `*ai` fails: run `<tool> --help` and retry once, then fallback to generic tools
 
+## CLI Path Resolution
+
+Binaries are installed at `~/.worktoolai/bin/`. If commands are not found in PATH, use absolute paths:
+
+```bash
+~/.worktoolai/bin/taskai --help
+~/.worktoolai/bin/codeai --help
+~/.worktoolai/bin/markdownai --help
+~/.worktoolai/bin/jsonai --help
+```
+
+**Fallback rule**: if `codeai` (bare name) fails with "command not found", retry with `~/.worktoolai/bin/codeai`. Apply to all four tools.
+
 ## taskai
 
 Task orchestration CLI. Manages plans, tasks with dependencies, and agent assignment.
