@@ -100,7 +100,7 @@ Source code analysis and navigation. Supports: go, rust, python, typescript, tsx
 **Important**: Run `codeai index --full` once if you indexed before stemmer/identifier split feature was added.
 
 ## markdownai
-Markdown analysis and search (read-only).
+Markdown analysis, search, and editing.
 
 **Commands**:
 - `toc FILE` — show table of contents. Flags: `--depth N`, `--flat`, `--json`, `--pretty`, `--max-bytes N`
@@ -108,12 +108,22 @@ Markdown analysis and search (read-only).
 - `tree DIR` — directory structure. Flags: `--depth N`, `--files-only`, `--count`, `--json`, `--max-bytes N`
 - `search PATH -q QUERY` — search. Flags: `--match text|exact|fuzzy|regex`, `--scope all|body|headers|frontmatter|code`, `--context N`, `--bare`, `--limit N`, `--offset N`, `--threshold N`, `--count-only`, `--json`, `--max-bytes N`
 - `frontmatter PATH` — query frontmatter. Flags: `--field FIELD`, `--filter EXPR`, `--list`, `--facets FIELD`, `--json`, `--max-bytes N`
+- `frontmatter-query PATH --field FIELD` — query frontmatter across files. Flags: `--filter EXPR`, `--count-only`, `--json`, `--max-bytes N`
+- `frontmatter-set FILE -k KEY -v VALUE` — set frontmatter field. Flags: `--dry-run`, `--output FILE`, `--with-toc`, `--json`
 - `overview PATH` — file-level summary. Flags: `--field FIELD`, `--filter EXPR`, `--sort FIELD|name|lines|sections`, `--reverse`, `--limit N`, `--offset N`, `--json`, `--max-bytes N`
 - `links FILE` — show links. Flags: `--type wiki|markdown|all`, `--resolved`, `--broken`, `--json`, `--max-bytes N`
 - `backlinks FILE` — show backlinks. Flags: `--root DIR`, `--json`, `--max-bytes N`
-- `graph PATH` — link graph. Flags: `--format adjacency|edges|stats|orphans`, `--start FILE`, `--depth N`, `--root DIR`, `--json`, `--max-bytes N`
+- `graph PATH` — link graph. Flags: `--format adjacency|edges|stats|orphans|frontmatter`, `--start FILE`, `--depth N`, `--field FIELD`, `--relation shared|ref`, `--include FIELDS`, `--json`, `--max-bytes N`
+- `write FILE` — write content to file. Flags: `-c CONTENT`, `--content-file FILE`, `--dry-run`, `--json`
+- `section-set FILE -s ADDR` — replace section content. Flags: `-c CONTENT`, `--content-file FILE`, `--dry-run`, `--output FILE`, `--with-toc`, `--json`
+- `section-replace FILE -s ADDR` — replace entire section (heading + body). Flags: `-c CONTENT`, `--content-file FILE`, `--dry-run`, `--output FILE`, `--with-toc`, `--json`
+- `section-add FILE -t TITLE` — add new section. Flags: `-c CONTENT`, `--content-file FILE`, `--after ADDR`, `--before ADDR`, `--level N`, `--dry-run`, `--output FILE`, `--with-toc`, `--json`
+- `section-delete FILE -s ADDR` — delete section. Flags: `--dry-run`, `--output FILE`, `--with-toc`, `--json`
+- `renum FILE` — renumber heading numbers sequentially. Flags: `--dry-run`, `--output FILE`, `--json`
 - `chars` — count characters. Input: file, directory, or stdin. Flags: `--json`, `--max-bytes N`
 - `index DIR` — build search index. Flags: `--force`, `--status`, `--dry-run`, `--check`, `--sync auto|force`, `--root DIR`
+
+**Global flags**: `--json`, `--pretty`, `--max-bytes N`, `--limit N`, `--offset N`, `--threshold N`, `--no-overflow`, `--plan`, `--count-only`, `--exists`, `--stats`, `--facets FIELD`, `--sync auto|force`, `--root DIR`
 
 **Section addressing**: `"#1.2"` (TOC index), `"## A > ### B"` (header path), `"L10-L25"` (line range)
 
