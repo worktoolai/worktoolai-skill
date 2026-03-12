@@ -2,6 +2,8 @@
 
 AI agent skill for structured code, markdown, and JSON processing — integrates **codeai**, **markdownai**, and **jsonai** into a single installable skill for Claude Code, OpenCode, and other agentskills.io-compatible tools.
 
+This repository also ships a minimal **OpenClaw plugin wrapper** so the same `skills/worktoolai` bundle can be installed through `openclaw plugins install`.
+
 ## What's included
 
 - **codeai** — Explore source code at block level (functions, classes). Index, search, and read individual blocks instead of whole files.
@@ -22,6 +24,15 @@ AI agent skill for structured code, markdown, and JSON processing — integrates
 ```bash
 claude /plugin install https://github.com/worktoolai/worktoolai-skill
 ```
+
+### OpenClaw
+
+```bash
+openclaw plugins install -l ~/dev/vcs/worktoolai/worktoolai-skill
+openclaw plugins enable worktoolai
+```
+
+The OpenClaw plugin wrapper only exists to expose the bundled `skills/worktoolai` directory through the OpenClaw plugin system. The skill content remains the source of truth.
 
 ### OpenCode
 
@@ -48,6 +59,9 @@ curl -fsSL https://raw.githubusercontent.com/worktoolai/jsonai/main/install.sh |
 ## Structure
 
 ```
+index.ts                    # Minimal OpenClaw plugin entrypoint
+openclaw.plugin.json        # OpenClaw manifest (config schema + skills)
+package.json                # OpenClaw package pack metadata
 skills/worktoolai/
 ├── SKILL.md                 # Main skill (compact usage contract)
 └── references/

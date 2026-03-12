@@ -1,21 +1,20 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "worktoolai",
   "description": "AI agent skills for structured code, markdown, and JSON processing — codeai + markdownai + jsonai",
+  "name": "worktoolai",
   "owner": {
     "name": "worktoolai"
   },
   "plugins": [
     {
-      "name": "worktoolai",
-      "description": "AI agent skills for structured code, markdown, and JSON processing — codeai + markdownai + jsonai",
-      "version": "1.0.3",
       "author": {
         "name": "worktoolai"
       },
-      "source": "./",
       "category": "productivity",
+      "description": "AI agent skills for structured code, markdown, and JSON processing — codeai + markdownai + jsonai",
       "homepage": "https://github.com/worktoolai/worktoolai-skill",
+      "name": "worktoolai",
+      "source": "./",
       "tags": [
         "codeai",
         "markdownai",
@@ -23,8 +22,9 @@
         "code-analysis",
         "markdown",
         "json"
-      ]
+      ],
+      "version": "1.0.4"
     }
   ],
-  "version": "1.0.3"
+  "version": "1.0.4"
 }

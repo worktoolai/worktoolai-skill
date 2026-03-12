@@ -1,0 +1,12 @@
+{
+  "name": "worktoolai",
+  "version": "1.0.4",
+  "description": "OpenClaw plugin wrapper for the worktoolai skill bundle",
+  "private": true,
+  "type": "module",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
